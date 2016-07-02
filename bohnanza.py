@@ -22,15 +22,22 @@ class Task(object):
 		return sum((self.check([die.roll() for die in dice]) for _ in range(n))) / n
 
 class CombinationTask(Task):
-	def __init__(self, count):
-		self.count = count
+	def __init__(self, colors):
+		self.colors = colors
+
+	def __str__(self):
+		return ', '.join(('%d %s%s' % (self.colors[color], color, 's' if self.colors[color] > 1 else '')
+							for color in self.colors))
 
 	def check(self, faces):
-		return all((sum((face == color for face in faces)) >= self.count[color] for color in self.count))
+		return all((sum((face == color for face in faces)) >= self.colors[color] for color in self.colors))
 
 class AnyTask(Task):
 	def __init__(self, tasks):
 		self.tasks = tasks
+
+	def __str__(self):
+		return ' or '.join((str(task) for task in self.tasks))
 
 	def check(self, faces):
 		return any((task.check(faces) for task in self.tasks))
@@ -38,6 +45,9 @@ class AnyTask(Task):
 class AllTask(Task):
 	def __init__(self, tasks):
 		self.tasks = tasks
+
+	def __str__(self):
+		return ' and '.join((str(task) for task in self.tasks))
 
 	def check(self, faces):
 		return all((task.check(faces) for task in self.tasks))
@@ -47,6 +57,9 @@ class ExceptTask(Task):
 		self.colors = colors
 		self.total = total
 
+	def __str__(self):
+		return 'any %d dice except %s' % (self.total, ' or '.join(self.colors))
+
 	def check(self, faces):
 		return len(faces) >= self.total and not any((face == color for face in faces for color in self.colors))
 
@@ -54,6 +67,9 @@ class TuplesTask(Task):
 	def __init__(self, size, tuples):
 		self.size = size
 		self.tuples = tuples
+
+	def __str__(self):
+		return '%d tuples of size %d' % (self.tuples, self.size)
 
 	def check(self, faces):
 		c = Counter(faces)
@@ -64,12 +80,18 @@ class CountTask(Task):
 		self.total = total
 		self.colors = colors
 
+	def __str__(self):
+		return 'any combination of %d %s' % (self.total, ' or '.join(self.colors))
+
 	def check(self, faces):
 		return sum((face in self.colors for face in faces)) >= self.total
 
 class ColorCountTask(Task):
 	def __init__(self, count):
 		self.count = count
+
+	def __str__(self):
+		return '%d different colors' % self.count
 
 	def check(self, faces):
 		return len(Counter(faces)) >= self.count
@@ -83,6 +105,15 @@ class FullHouseTask(Task):
 		self.count2 = total - count1
 		if self.count1 < self.count2:
 			self.count1, self.count2 = self.count2, self.count1
+
+	def __str__(self):
+		if self.total == 5 and self.count1 == 3:
+			return ('full house, one color %s, the other %s' 
+						% (self.color1, 'free' if self.color2 is None else self.color2))
+		else:
+			return ('full house with %d dice, one tuple %d, the other %d, one color %s, the other %s' 
+						% (self.total, self.count1, self.count2, self.color1, 
+						'free' if self.color2 is None else self.color2))
 
 	def check(self, faces):
 		c = Counter(faces)
@@ -105,16 +136,25 @@ if __name__ == '__main__':
 		n = 2**16
 
 	dice = [WhiteDie(), WhiteDie(), WhiteDie(), WhiteDie(), BrownDie(), BrownDie(), BrownDie()]
-	print('3 blues', CombinationTask({'blue': 3}).probability(dice, n=n))
-	print('2 purples and 1 black', CombinationTask({'black': 1, 'purple': 2}).probability(dice, n=n))
-	print('3 blacks or 2 yellow', AnyTask([CombinationTask({'black': 3}), CombinationTask({'yellow': 2})]).probability(dice, n=n))
-	print('2.5 blues and 2.5 orange', AnyTask([CombinationTask({'blue': 3, 'orange': 2}), CombinationTask({'blue': 2, 'orange': 3})]).probability(dice, n=n))
-	print('2.5 blues and 2.5 orange (full house)', FullHouseTask('blue', 'orange').probability(dice, n=n))
-	print('Anything except yellow or purple', ExceptTask(['yellow', 'purple']).probability(dice, n=n))
-	print('3 pairs', TuplesTask(2, 3).probability(dice, n=n))
-	print('2 triples', TuplesTask(3, 2).probability(dice, n=n))
-	print('1 triple', TuplesTask(3, 1).probability(dice, n=n))
-	print('Combination of 4 red / purple', CountTask(4, {'red', 'purple'}).probability(dice, n=n))
-	print('6 different colors', ColorCountTask(6).probability(dice, n=n))
-	print('7 different colors', ColorCountTask(7).probability(dice, n=n))
-	print('Full house orange / other', FullHouseTask('orange').probability(dice, n=n))
+
+	combinations = [
+		{'blue': 3},
+		{'black': 1, 'purple': 2},
+		{'blue': 3, 'orange': 2}
+	]
+	tasks = [CombinationTask(combination) for combination in combinations] + [
+			AnyTask([CombinationTask({'black': 3}), CombinationTask({'yellow': 2})]),
+			FullHouseTask('blue', 'orange'),
+			FullHouseTask('orange'),
+			ExceptTask(['yellow', 'purple']),
+			TuplesTask(2, 3),
+			TuplesTask(3, 2),
+			TuplesTask(3, 1),
+			TuplesTask(4, 1),
+			CountTask(4, {'red', 'purple'}),
+			ColorCountTask(6),
+			ColorCountTask(7)
+		]
+
+	for task in tasks:
+		print('%s: %.1f%%' % (task, task.probability(dice, n=n) * 100))
