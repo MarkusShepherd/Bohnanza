@@ -7,10 +7,7 @@ class Die(object):
         self.faces = faces
 
     def __str__(self):
-        return str(self.faces)
-
-    def __repr__(self):
-        return self.__str__()
+        return '[%s]' % ', '.join(self.faces)
 
     def roll(self):
         return self.faces[randint(0, len(self.faces) - 1)]
@@ -20,10 +17,7 @@ class MonoDie(Die):
         self.face = face
 
     def __str__(self):
-        return str(self.face)
-
-    def __repr__(self):
-        return self.__str__()
+        return '[%s]' % self.face
 
     def roll(self):
         return self.face
@@ -183,12 +177,20 @@ if __name__ == '__main__':
     tasks += extra_tasks
     tasks += [AllTask(extra_tasks[:2]), AllTask(extra_tasks)]
 
-    print(dice)
+    print(', '.join([str(die) for die in dice]))
     for task in tasks:
         print('%s: %.1f%%' % (task, task.probability(dice, n=n) * 100))
 
-    dice = dice[1:] + [MonoDie('black')]
+    dice = [MonoDie('black')] + dice[1:]
 
-    print(dice)
+    print()
+    print(', '.join([str(die) for die in dice]))
+    for task in tasks:
+        print('%s: %.1f%%' % (task, task.probability(dice, n=n) * 100))
+
+    dice = [MonoDie('green')] + dice[:6]
+
+    print()
+    print(', '.join([str(die) for die in dice]))
     for task in tasks:
         print('%s: %.1f%%' % (task, task.probability(dice, n=n) * 100))
