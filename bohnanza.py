@@ -1,3 +1,5 @@
+from __future__ import division, print_function
+
 from random import randint
 from collections import Counter
 import sys
